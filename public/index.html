@@ -1,0 +1,693 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f7f9fc">
+<title>Image Resizer &amp; Optimizer</title>
+
+<style>
+:root{--ink:#172554;--muted:#64748b;--line:#dbe2ea;--accent:#1d4ed8;--bg:#f4f7fb;--white:#fff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:#172033;font:15px/1.5 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:1040px;margin:36px auto;padding:0 18px}
+.app{background:#fff;border:1px solid #e1e6ee;border-radius:22px;box-shadow:0 12px 40px #1e293b0b;overflow:hidden}
+header{padding:24px 28px 18px;border-bottom:1px solid #edf0f4;display:flex;align-items:center;gap:13px}
+.logo{width:42px;height:42px;border-radius:13px;background:#eaf1ff;color:#1d4ed8;display:grid;place-items:center;font-size:22px}
+h1{font-size:21px;line-height:1.2;margin:0;font-weight:750;letter-spacing:-.4px}
+header p{margin:4px 0 0;color:var(--muted);font-size:13px}
+main .body{padding:24px 28px 28px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.section{padding:0 0 21px;margin-bottom:20px;border-bottom:1px solid #edf0f4}
+.section:last-of-type{border:0;margin:0;padding:0}
+.section-title{font-weight:700;margin:0 0 13px;font-size:15px}
+.field label,.field-title{display:block;color:#475569;font-size:13px;font-weight:600;margin:0 0 7px}
+input[type=number],select{width:100%;height:44px;border:1px solid #d6dce5;border-radius:13px;padding:0 13px;background:white;color:#172033;font:inherit;outline:none}
+input:focus,select:focus{border-color:#7196e8;box-shadow:0 0 0 3px #2563eb16}
+.radios{display:flex;flex-wrap:wrap;gap:10px 20px}
+.radio{display:flex;align-items:center;gap:8px;color:#273449;font-size:14px;cursor:pointer}
+.radio input{accent-color:#1d4ed8;width:17px;height:17px}
+.formats{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.format{border:1px solid #dce2eb;border-radius:12px;padding:11px;text-align:center;cursor:pointer;font-weight:650;color:#526078}
+.format input{display:none}
+.format:has(input:checked){background:#edf3ff;border-color:#a9c2fa;color:#1747a8}
+
+.upload{display:flex;width:100%;min-height:160px;box-sizing:border-box;flex-direction:column;align-items:center;justify-content:center;gap:5px;border:1.5px dashed #b8c7dd;background:#f8faff;border-radius:16px;padding:24px;text-align:center;cursor:pointer;transition:background .15s,border-color .15s}
+.upload.drag{background:#edf4ff;border-color:#2563eb}
+.upload:hover{background:#f1f6ff;border-color:#8eace8}
+.upload strong{display:block;margin:0;line-height:1.4}
+.upload small{display:block;color:#64748b;line-height:1.4}
+.upload input{display:none}
+.upload:focus-within{outline:3px solid #2563eb22;outline-offset:3px}
+textarea{width:100%;min-height:78px;border:1px solid #d6dce5;border-radius:12px;padding:11px 13px;font:inherit;color:#172033;resize:vertical}
+textarea:focus{outline:none;border-color:#7196e8;box-shadow:0 0 0 3px #2563eb16}
+.ai-note{font-size:12px;color:#475569;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:10px 12px;margin-top:12px}
+
+.preview-wrap{display:none;margin-top:14px;grid-template-columns:120px 1fr;gap:14px;align-items:center}
+.preview-wrap img{width:120px;height:88px;object-fit:contain;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:10px}
+.file-meta{font-size:13px;color:#64748b;overflow-wrap:anywhere}
+
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}
+.btn{border:0;border-radius:13px;padding:13px 19px;font:inherit;font-weight:700;cursor:pointer}
+.primary{background:#111827;color:white;flex:1}
+.primary:disabled{opacity:.45;cursor:not-allowed}
+.secondary{background:#eef2f7;color:#334155}
+
+.status{display:none;margin-top:15px;padding:12px 14px;border-radius:12px;background:#eff6ff;color:#1e40af;font-size:13px}
+.status.error{background:#fff1f2;color:#be123c}
+.status.success{background:#ecfdf5;color:#047857}
+
+.output{display:none;margin-top:20px;border:1px solid #dce9df;background:#f6fcf8;border-radius:16px;padding:16px}
+.output h3{margin:0 0 6px;font-size:16px}
+.output p{margin:0 0 12px;color:#526078;font-size:13px}
+
+.processed-preview{margin:14px 0;padding:12px;border:1px solid #dbe2ea;border-radius:13px;background:#fff}
+.processed-preview-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px;color:#334155;font-size:13px;font-weight:650}
+.processed-preview-head span:last-child{color:#64748b;font-weight:500}
+.processed-preview img{display:block;width:100%;height:auto;max-width:100%;max-height:none;object-fit:contain;object-position:center;margin:0 auto;border-radius:8px;background:#f1f5f9}
+
+.download{display:inline-flex;text-decoration:none;background:#087443;color:white;padding:11px 16px;border-radius:11px;font-weight:700}
+
+footer{padding:15px 28px;background:#fafbfd;border-top:1px solid #edf0f4;color:#738096;font-size:12px}
+
+@media(max-width:650px){
+main{margin:12px auto;padding:0 10px}
+.app{border-radius:16px}
+header{padding:18px}
+.body{padding:18px!important}
+.grid{grid-template-columns:1fr;gap:12px}
+.formats{gap:6px}
+.format{padding:10px 5px}
+footer{padding:14px 18px}
+}
+</style>
+</head>
+
+<body>
+<main>
+<div class="app">
+
+<header>
+ <div class="logo">▧</div>
+ <div>
+  <h1>Image Resizer &amp; Optimizer</h1>
+  <p>Resize, crop and compress while preserving your original image.</p>
+ </div>
+</header>
+
+<div class="body">
+
+<section class="section">
+ <h2 class="section-title">1. Upload your original image</h2>
+
+ <label class="upload" id="dropzone" for="file">
+  <div style="font-size:27px">＋</div>
+  <strong>Choose an image or drag it here</strong>
+  <small>PNG, JPG, JPEG or WebP · Processing happens in your browser</small>
+  <input id="file" type="file" accept="image/png,image/jpeg,image/webp">
+ </label>
+
+ <div class="preview-wrap" id="previewWrap">
+  <img id="preview" alt="Original image preview">
+  <div class="file-meta" id="fileMeta"></div>
+ </div>
+</section>
+
+<section class="section">
+ <h2 class="section-title">2. Image dimensions</h2>
+
+ <div class="grid">
+  <div class="field">
+   <label for="width">Width (px)</label>
+   <input id="width" type="number" min="1" max="12000" value="1024">
+  </div>
+  <div class="field">
+   <label for="height">Height (px)</label>
+   <input id="height" type="number" min="1" max="12000" value="768">
+  </div>
+ </div>
+
+ <div style="margin-top:15px">
+  <div class="field-title">Aspect ratio</div>
+  <div class="radios" style="margin-top:9px">
+   <label class="radio"><input type="radio" name="ratio" value="custom" checked> Custom</label>
+   <label class="radio"><input type="radio" name="ratio" value="4:3"> 4:3</label>
+   <label class="radio"><input type="radio" name="ratio" value="16:9"> 16:9</label>
+   <label class="radio"><input type="radio" name="ratio" value="1:1"> 1:1</label>
+   <label class="radio"><input type="radio" name="ratio" value="3:2"> 3:2</label>
+  </div>
+ </div>
+</section>
+
+<section class="section">
+ <h2 class="section-title">3. Output format &amp; file size</h2>
+
+ <div class="formats">
+  <label class="format"><input type="radio" name="format" value="image/webp" checked> WebP</label>
+  <label class="format"><input type="radio" name="format" value="image/png"> PNG</label>
+  <label class="format"><input type="radio" name="format" value="image/jpeg"> JPG</label>
+ </div>
+
+ <div class="grid" style="margin-top:15px">
+  <div class="field">
+   <label for="minKB">Minimum file size (KB)</label>
+   <input id="minKB" type="number" min="1" value="70">
+  </div>
+  <div class="field">
+   <label for="maxKB">Maximum file size (KB)</label>
+   <input id="maxKB" type="number" min="1" value="100">
+  </div>
+ </div>
+</section>
+
+<section class="section">
+ <h2 class="section-title">4. Image fitting method</h2>
+
+ <div class="radios" style="display:grid;gap:11px">
+  <label class="radio"><input type="radio" name="fit" value="crop"> Smart crop – fill entire canvas (intentional crop)</label>
+  <label class="radio"><input type="radio" name="fit" value="contain"> Contain – preserve entire image</label>
+  <label class="radio"><input type="radio" name="fit" value="extend" checked> Extend background – no crop (recommended)</label>
+ </div>
+
+ <div id="backgroundOptions" style="margin:14px 0 0;padding:14px;border:1px solid #dbe2ea;border-radius:12px;background:#f8fafc">
+  <div class="field-title">Background fill style</div>
+  <div class="radios" style="display:grid;gap:10px;margin-top:9px">
+   <label class="radio"><input type="radio" name="bgStyle" value="ai" checked> AI background outpainting – generate matching missing background (recommended)</label>
+   <label class="radio"><input type="radio" name="bgStyle" value="blur"> Photo-matched blur – use the original photo as a soft full-canvas background</label>
+   <label class="radio"><input type="radio" name="bgStyle" value="mirror"> Mirrored edges – reflect the photo outward to continue its colours and patterns</label>
+   <label class="radio"><input type="radio" name="bgStyle" value="edge"> Edge extension – stretch edge pixels with a soft blend</label>
+   <label class="radio"><input type="radio" name="bgStyle" value="color"> Sampled edge colour – create a subtle colour-matched background</label>
+  </div>
+  <div id="aiPromptWrap" style="margin-top:12px">
+   <label class="field-title" for="aiPrompt">Optional background direction</label>
+   <textarea id="aiPrompt" placeholder="Example: Continue the soft winter indoor background, warm Christmas lights and natural wooden tabletop. Do not add text or new foreground objects."></textarea>
+   <div class="ai-note">AI fills only the extra canvas around your image. The original image is composited over the generated result afterward to protect its text, logo, people, colours and layout. AI processing requires your configured backend and an OpenAI API key.</div>
+  </div>
+  <p style="font-size:12px;color:#64748b;margin:10px 0 0">Smart Crop remains available for intentional cropping. Contain preserves the full image with a plain canvas. AI Extend preserves the full original composition and generates only the missing canvas area.</p>
+ </div>
+
+ <p style="font-size:12px;color:#64748b;margin:10px 0 0">
+  Smart Crop is available whenever intentional cropping is wanted. Contain preserves the full image with a plain canvas. Extend Background preserves every original element and fills the remaining canvas without white padding.
+ </p>
+</section>
+
+<section class="section">
+ <h2 class="section-title">5. Output quality</h2>
+
+ <div class="radios">
+  <label class="radio"><input type="radio" name="quality" value="high" checked> High</label>
+  <label class="radio"><input type="radio" name="quality" value="maximum"> Maximum</label>
+ </div>
+</section>
+
+<div class="actions">
+ <button class="btn primary" id="process" disabled>Process image →</button>
+ <button class="btn secondary" id="reset" type="button">Reset</button>
+</div>
+
+<div class="status" id="status" role="status"></div>
+
+<div class="output" id="output">
+ <h3>✓ Your image is ready</h3>
+ <p id="outputMeta"></p>
+
+ <div class="processed-preview">
+  <div class="processed-preview-head">
+   <span>Processed image preview</span>
+   <span id="previewDimensions"></span>
+  </div>
+  <img id="processedPreview" alt="Full processed image preview">
+ </div>
+
+ <a class="download" id="download" download="resized-image.webp">Download processed image</a>
+</div>
+
+</div>
+
+<footer>
+Standard resizing runs in your browser. AI background outpainting sends the selected image to your configured backend and AI image provider. The original image is composited over the generated background before export. Keep your API key on the server; never place it in this HTML file.
+</footer>
+
+</div>
+</main>
+
+<script src="./config.js"></script>
+<script>
+const API_BASE_URL=(window.IMAGE_RESIZER_API_BASE||'').replace(/\/$/,'');
+const $=id=>document.getElementById(id);
+
+let sourceFile=null,sourceImage=null,objectUrl=null;
+
+const fileInput=$('file');
+const drop=$('dropzone');
+
+function selected(name){
+ return document.querySelector(`input[name="${name}"]:checked`).value;
+}
+
+function status(msg,type=''){
+ const el=$('status');
+ el.textContent=msg;
+ el.className='status '+type;
+ el.style.display='block';
+}
+
+function clearStatus(){
+ $('status').style.display='none';
+ $('output').style.display='none';
+}
+
+function setRatio(r){
+ if(r==='custom')return;
+ let [a,b]=r.split(':').map(Number);
+ let w=Number($('width').value)||1024;
+ $('height').value=Math.round(w*b/a);
+}
+
+document.querySelectorAll('input[name=ratio]').forEach(el=>{
+ el.addEventListener('change',()=>setRatio(el.value));
+});
+
+function updateBackgroundOptions(){
+ const isExtend=selected('fit')==='extend';
+ $('backgroundOptions').style.display=isExtend?'block':'none';
+ $('aiPromptWrap').style.display=isExtend&&selected('bgStyle')==='ai'?'block':'none';
+}
+document.querySelectorAll('input[name=fit],input[name=bgStyle]').forEach(el=>{
+ el.addEventListener('change',updateBackgroundOptions);
+});
+updateBackgroundOptions();
+
+function loadFile(file){
+ if(!file)return;
+
+ if(!/^image\/(png|jpeg|webp)$/.test(file.type)){
+  status('Please choose a PNG, JPG or WebP image.','error');
+  return;
+ }
+
+ sourceFile=file;
+
+ if(objectUrl)URL.revokeObjectURL(objectUrl);
+
+ objectUrl=URL.createObjectURL(file);
+
+ const im=new Image();
+
+ im.onload=()=>{
+  sourceImage=im;
+  $('preview').src=objectUrl;
+  $('previewWrap').style.display='grid';
+
+  $('fileMeta').textContent=
+   `${file.name} · ${im.naturalWidth} × ${im.naturalHeight}px · ${(file.size/1024).toFixed(1)} KB`;
+
+  $('process').disabled=false;
+  clearStatus();
+ };
+
+ im.onerror=()=>{
+  status('The selected image could not be opened.','error');
+ };
+
+ im.src=objectUrl;
+}
+
+fileInput.addEventListener('change',e=>loadFile(e.target.files[0]));
+
+['dragenter','dragover'].forEach(ev=>{
+ drop.addEventListener(ev,e=>{
+  e.preventDefault();
+  drop.classList.add('drag');
+ });
+});
+
+['dragleave','drop'].forEach(ev=>{
+ drop.addEventListener(ev,e=>{
+  e.preventDefault();
+  drop.classList.remove('drag');
+ });
+});
+
+drop.addEventListener('drop',e=>{
+ loadFile(e.dataTransfer.files[0]);
+});
+
+function canvasBlob(canvas,type,q){
+ return new Promise(resolve=>canvas.toBlob(resolve,type,q));
+}
+
+async function encodeWithinRange(canvas,type,min,max,qualityMode){
+
+ if(type==='image/png'){
+  return {
+   blob:await canvasBlob(canvas,type),
+   note:'PNG is lossless; its file size cannot be precisely controlled with a quality slider.'
+  };
+ }
+
+ let lo=0.35;
+ let hi=qualityMode==='maximum'?0.98:0.92;
+ let best=null;
+
+ for(let i=0;i<12;i++){
+
+  let q=(lo+hi)/2;
+  let b=await canvasBlob(canvas,type,q);
+
+  if(!b)throw Error('This browser cannot encode the selected format.');
+
+  let kb=b.size/1024;
+
+  if(kb<=max){
+   best={blob:b,q,kb};
+   lo=q;
+  }else{
+   hi=q;
+  }
+ }
+
+ if(!best){
+  let b=await canvasBlob(canvas,type,0.35);
+
+  return {
+   blob:b,
+   q:0.35,
+   kb:b.size/1024,
+   tooLarge:true
+  };
+ }
+
+ if(best.kb<min){
+  let b=await canvasBlob(
+   canvas,
+   type,
+   qualityMode==='maximum'?0.98:0.92
+  );
+
+  return {
+   blob:b,
+   q:qualityMode==='maximum'?0.98:0.92,
+   kb:b.size/1024,
+   belowMin:true
+  };
+ }
+
+ return best;
+}
+
+async function requestAIOutpaint(width,height){
+ const form=new FormData();
+ form.append('image',sourceFile,sourceFile.name||'source-image');
+ form.append('width',String(width));
+ form.append('height',String(height));
+ form.append('prompt',($('aiPrompt').value||'').trim());
+ const response=await fetch(`${API_BASE_URL}/api/outpaint`,{method:'POST',body:form});
+ let payload={};
+ try{payload=await response.json();}catch(_e){}
+ if(!response.ok){
+  throw new Error(payload.error||`AI outpainting failed (HTTP ${response.status}). Check config.js, the backend URL, API key and server logs.`);
+ }
+ if(!payload.imageBase64||!payload.mimeType){
+  throw new Error('The AI service returned an invalid image response.');
+ }
+ return payload;
+}
+
+$('process').addEventListener('click',async()=>{
+
+ if(!sourceImage)return;
+
+ const w=Number($('width').value);
+ const h=Number($('height').value);
+ const min=Number($('minKB').value);
+ const max=Number($('maxKB').value);
+ const type=selected('format');
+ const fit=selected('fit');
+ const quality=selected('quality');
+
+ if(!Number.isInteger(w)||!Number.isInteger(h)||w<1||h<1||w>12000||h>12000){
+  status('Enter valid dimensions between 1 and 12,000 pixels.','error');
+  return;
+ }
+
+ if(!min||!max||min<1||max<min){
+  status('Enter a valid file-size range; maximum must be at least minimum.','error');
+  return;
+ }
+
+ clearStatus();
+
+ $('process').disabled=true;
+ $('process').textContent='Processing…';
+
+ try{
+
+  const c=document.createElement('canvas');
+  c.width=w;
+  c.height=h;
+
+  const ctx=c.getContext('2d',{alpha:type!=='image/jpeg'});
+
+  const sw=sourceImage.naturalWidth;
+  const sh=sourceImage.naturalHeight;
+
+  if(fit==='extend' && selected('bgStyle')==='ai'){
+   status('AI is extending the background. This can take up to a couple of minutes…');
+   $('process').textContent='Generating background…';
+   const aiResult=await requestAIOutpaint(w,h);
+   const generatedImage=new Image();
+   generatedImage.src=`data:${aiResult.mimeType};base64,${aiResult.imageBase64}`;
+   await new Promise((resolve,reject)=>{generatedImage.onload=resolve;generatedImage.onerror=()=>reject(new Error('Could not load the AI-generated background.'));});
+   // Fit the generated canvas to the exact requested output dimensions.
+   ctx.drawImage(generatedImage,0,0,w,h);
+   // Re-composite the original source above the AI result. This protects
+   // all original typography, logos, faces, colours and foreground details.
+   const foregroundScale=Math.min(w/sw,h/sh);
+   const foregroundWidth=sw*foregroundScale;
+   const foregroundHeight=sh*foregroundScale;
+   ctx.drawImage(sourceImage,(w-foregroundWidth)/2,(h-foregroundHeight)/2,foregroundWidth,foregroundHeight);
+  }else if(fit==='crop'){
+   // Smart Crop: fill the target canvas, intentionally cropping overflow.
+   const scale=Math.max(w/sw,h/sh);
+   const dw=sw*scale;
+   const dh=sh*scale;
+   ctx.drawImage(sourceImage,(w-dw)/2,(h-dh)/2,dw,dh);
+
+  }else if(fit==='contain'){
+   // Contain: preserve every source pixel and use a neutral background.
+   if(type==='image/jpeg'){
+    ctx.fillStyle='#ffffff';
+    ctx.fillRect(0,0,w,h);
+   }
+   const scale=Math.min(w/sw,h/sh);
+   const dw=sw*scale;
+   const dh=sh*scale;
+   ctx.drawImage(sourceImage,(w-dw)/2,(h-dh)/2,dw,dh);
+
+  }else if(fit==='extend'){
+   // Extend mode always paints an opaque, full-canvas background first.
+   // The untouched source is then placed on top using CONTAIN geometry.
+   // This guarantees that no blank/white bars are introduced by this mode.
+   const bgStyle=selected('bgStyle');
+   const bg=document.createElement('canvas');
+   bg.width=w; bg.height=h;
+   const bctx=bg.getContext('2d');
+   const coverScale=Math.max(w/sw,h/sh);
+   const bw=sw*coverScale, bh=sh*coverScale;
+   const bx=(w-bw)/2, by=(h-bh)/2;
+
+   if(bgStyle==='blur'){
+    bctx.save();
+    bctx.filter=`blur(${Math.max(16,Math.round(Math.min(w,h)*0.045))}px)`;
+    bctx.drawImage(sourceImage,bx,by,bw,bh);
+    bctx.restore();
+    // Slightly darken the blurred fill to avoid a washed-out white halo.
+    bctx.fillStyle='rgba(0,0,0,0.035)';
+    bctx.fillRect(0,0,w,h);
+   }else if(bgStyle==='mirror'){
+    // Draw a mirrored tile pattern from the original photograph, then soften it.
+    const tile=document.createElement('canvas');
+    tile.width=Math.max(1,Math.ceil(w/2));
+    tile.height=Math.max(1,Math.ceil(h/2));
+    const tctx=tile.getContext('2d');
+    const scale=Math.max(tile.width/sw,tile.height/sh);
+    const tw=sw*scale, th=sh*scale;
+    tctx.drawImage(sourceImage,(tile.width-tw)/2,(tile.height-th)/2,tw,th);
+    bctx.save();
+    bctx.filter=`blur(${Math.max(5,Math.round(Math.min(w,h)*0.012))}px)`;
+    for(let yy=-1;yy<3;yy++){
+     for(let xx=-1;xx<3;xx++){
+      bctx.save();
+      bctx.translate(xx*tile.width,yy*tile.height);
+      if(Math.abs(xx)%2===1){bctx.translate(tile.width,0);bctx.scale(-1,1);}
+      if(Math.abs(yy)%2===1){bctx.translate(0,tile.height);bctx.scale(1,-1);}
+      bctx.drawImage(tile,0,0,tile.width,tile.height);
+      bctx.restore();
+     }
+    }
+    bctx.restore();
+   }else if(bgStyle==='edge'){
+    // Start with a cover-scaled image and blur it gently; this keeps the
+    // extended areas visually related to the actual image edges.
+    bctx.save();
+    bctx.filter=`blur(${Math.max(8,Math.round(Math.min(w,h)*0.02))}px)`;
+    bctx.drawImage(sourceImage,bx,by,bw,bh);
+    bctx.restore();
+    // Blend the dominant edge colours over the outermost canvas perimeter.
+    const strip=Math.max(2,Math.round(Math.min(w,h)*0.012));
+    const top=bctx.getImageData(0,0,w,1).data;
+    const bottom=bctx.getImageData(0,h-1,w,1).data;
+    const left=bctx.getImageData(0,0,1,h).data;
+    const right=bctx.getImageData(w-1,0,1,h).data;
+    const avg=(data)=>{let r=0,g=0,b=0,n=data.length/4;for(let i=0;i<data.length;i+=4){r+=data[i];g+=data[i+1];b+=data[i+2];}return `rgb(${Math.round(r/n)},${Math.round(g/n)},${Math.round(b/n)})`;};
+    bctx.fillStyle=avg(top);bctx.fillRect(0,0,w,strip);
+    bctx.fillStyle=avg(bottom);bctx.fillRect(0,h-strip,w,strip);
+    bctx.fillStyle=avg(left);bctx.fillRect(0,0,strip,h);
+    bctx.fillStyle=avg(right);bctx.fillRect(w-strip,0,strip,h);
+   }else{
+    // Use sampled average edge colour with a gentle four-corner gradient.
+    const sample=document.createElement('canvas');
+    sample.width=sw; sample.height=sh;
+    const sctx=sample.getContext('2d',{willReadFrequently:true});
+    sctx.drawImage(sourceImage,0,0);
+    const data=sctx.getImageData(0,0,sw,sh).data;
+    const sums=[0,0,0], step=Math.max(1,Math.floor(Math.min(sw,sh)/80));
+    let count=0;
+    for(let x=0;x<sw;x+=step)for(const y of [0,sh-1]){
+     const i=(y*sw+x)*4;sums[0]+=data[i];sums[1]+=data[i+1];sums[2]+=data[i+2];count++;
+    }
+    for(let y=step;y<sh-step;y+=step)for(const x of [0,sw-1]){
+     const i=(y*sw+x)*4;sums[0]+=data[i];sums[1]+=data[i+1];sums[2]+=data[i+2];count++;
+    }
+    const colour=`rgb(${Math.round(sums[0]/count)},${Math.round(sums[1]/count)},${Math.round(sums[2]/count)})`;
+    bctx.fillStyle=colour;bctx.fillRect(0,0,w,h);
+   }
+
+   ctx.drawImage(bg,0,0,w,h);
+
+   // Full original foreground: contain scale, no crop, no distortion.
+   const foregroundScale=Math.min(w/sw,h/sh);
+   const foregroundWidth=sw*foregroundScale;
+   const foregroundHeight=sh*foregroundScale;
+   ctx.drawImage(sourceImage,(w-foregroundWidth)/2,(h-foregroundHeight)/2,foregroundWidth,foregroundHeight);
+  }
+
+  const result=await encodeWithinRange(
+   c,type,min,max,quality
+  );
+
+  const ext=
+   type==='image/jpeg'?'jpg':
+   type==='image/png'?'png':'webp';
+
+  const url=URL.createObjectURL(result.blob);
+
+  const link=$('download');
+
+  if(link.dataset.url){
+   URL.revokeObjectURL(link.dataset.url);
+  }
+
+  link.href=url;
+  link.dataset.url=url;
+  link.download=`resized-${w}x${h}.${ext}`;
+
+  let note=
+   `${w} × ${h}px · ${ext.toUpperCase()} · ${(result.blob.size/1024).toFixed(1)} KB`;
+
+  if(result.q){
+   note+=` · Encode quality ${(result.q*100).toFixed(0)}%`;
+  }
+
+  if(result.tooLarge){
+   note+=' · Could not meet maximum size without further quality reduction.';
+  }
+
+  if(result.belowMin){
+   note+=' · Best available quality is below the requested minimum size.';
+  }
+
+  if(result.note){
+   note+=' · '+result.note;
+  }
+
+  // Display the actual processed image.
+  $('outputMeta').textContent=note;
+
+  $('processedPreview').src=url;
+
+  $('processedPreview').alt=
+   `Full processed image preview at ${w} by ${h} pixels`;
+
+  $('previewDimensions').textContent=
+   `${w} × ${h} px`;
+
+  $('output').style.display='block';
+
+  status(
+   'Processing complete. Review the output details and download your image.',
+   'success'
+  );
+
+ }catch(err){
+
+  status(
+   err.message||'Something went wrong while processing the image.',
+   'error'
+  );
+
+ }finally{
+
+  $('process').disabled=false;
+  $('process').textContent='Process image →';
+
+ }
+});
+
+$('reset').addEventListener('click',()=>{
+
+ sourceFile=null;
+ sourceImage=null;
+ fileInput.value='';
+
+ $('previewWrap').style.display='none';
+
+ $('processedPreview').removeAttribute('src');
+ $('previewDimensions').textContent='';
+
+ $('process').disabled=true;
+
+ $('width').value=1024;
+ $('height').value=768;
+ $('minKB').value=70;
+ $('maxKB').value=100;
+
+ document.querySelector('input[name=ratio][value=custom]').checked=true;
+ document.querySelector('input[name=format][value="image/webp"]').checked=true;
+ document.querySelector('input[name=fit][value=extend]').checked=true;
+ document.querySelector('input[name=bgStyle][value=ai]').checked=true;
+ $('aiPrompt').value='';
+ updateBackgroundOptions();
+ document.querySelector('input[name=quality][value=high]').checked=true;
+
+ clearStatus();
+
+ if(objectUrl){
+  URL.revokeObjectURL(objectUrl);
+  objectUrl=null;
+ }
+
+ const link=$('download');
+
+ if(link.dataset.url){
+  URL.revokeObjectURL(link.dataset.url);
+  delete link.dataset.url;
+ }
+
+});
+
+</script>
+</body>
+</html>

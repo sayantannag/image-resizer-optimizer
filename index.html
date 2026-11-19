@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -39,6 +40,9 @@ input:focus,select:focus{border-color:#7196e8;box-shadow:0 0 0 3px #2563eb16}
 .upload small{display:block;color:#64748b;line-height:1.4}
 .upload input{display:none}
 .upload:focus-within{outline:3px solid #2563eb22;outline-offset:3px}
+textarea{width:100%;min-height:78px;border:1px solid #d6dce5;border-radius:12px;padding:11px 13px;font:inherit;color:#172033;resize:vertical}
+textarea:focus{outline:none;border-color:#7196e8;box-shadow:0 0 0 3px #2563eb16}
+.ai-note{font-size:12px;color:#475569;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:10px 12px;margin-top:12px}
 
 .preview-wrap{display:none;margin-top:14px;grid-template-columns:120px 1fr;gap:14px;align-items:center}
 .preview-wrap img{width:120px;height:88px;object-fit:contain;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:10px}
@@ -169,12 +173,18 @@ footer{padding:14px 18px}
  <div id="backgroundOptions" style="margin:14px 0 0;padding:14px;border:1px solid #dbe2ea;border-radius:12px;background:#f8fafc">
   <div class="field-title">Background fill style</div>
   <div class="radios" style="display:grid;gap:10px;margin-top:9px">
-   <label class="radio"><input type="radio" name="bgStyle" value="blur" checked> Photo-matched blur – use the original photo as a soft full-canvas background</label>
+   <label class="radio"><input type="radio" name="bgStyle" value="ai" checked> AI background outpainting – generate matching missing background (recommended)</label>
+   <label class="radio"><input type="radio" name="bgStyle" value="blur"> Photo-matched blur – use the original photo as a soft full-canvas background</label>
    <label class="radio"><input type="radio" name="bgStyle" value="mirror"> Mirrored edges – reflect the photo outward to continue its colours and patterns</label>
    <label class="radio"><input type="radio" name="bgStyle" value="edge"> Edge extension – stretch edge pixels with a soft blend</label>
    <label class="radio"><input type="radio" name="bgStyle" value="color"> Sampled edge colour – create a subtle colour-matched background</label>
   </div>
-  <p style="font-size:12px;color:#64748b;margin:10px 0 0">All styles keep the complete original image visible on top, with its proportions unchanged. These browser-based fills are visual approximations; seamless AI outpainting requires a separate AI image service.</p>
+  <div id="aiPromptWrap" style="margin-top:12px">
+   <label class="field-title" for="aiPrompt">Optional background direction</label>
+   <textarea id="aiPrompt" placeholder="Example: Continue the soft winter indoor background, warm Christmas lights and natural wooden tabletop. Do not add text or new foreground objects."></textarea>
+   <div class="ai-note">AI fills only the extra canvas around your image. The original image is composited over the generated result afterward to protect its text, logo, people, colours and layout. AI processing requires your configured backend and an OpenAI API key.</div>
+  </div>
+  <p style="font-size:12px;color:#64748b;margin:10px 0 0">Smart Crop remains available for intentional cropping. Contain preserves the full image with a plain canvas. AI Extend preserves the full original composition and generates only the missing canvas area.</p>
  </div>
 
  <p style="font-size:12px;color:#64748b;margin:10px 0 0">
@@ -216,13 +226,15 @@ footer{padding:14px 18px}
 </div>
 
 <footer>
-Original pixels are resized in-browser. No image is uploaded to a server. Text and graphics are not recreated; resizing cannot restore detail absent from a low-resolution source.
+Standard resizing runs in your browser. AI background outpainting sends the selected image to your configured backend and AI image provider. The original image is composited over the generated background before export. Keep your API key on the server; never place it in this HTML file.
 </footer>
 
 </div>
 </main>
 
+<script src="./config.js"></script>
 <script>
+const API_BASE_URL=(window.IMAGE_RESIZER_API_BASE||'').replace(/\/$/,'');
 const $=id=>document.getElementById(id);
 
 let sourceFile=null,sourceImage=null,objectUrl=null;
@@ -258,9 +270,11 @@ document.querySelectorAll('input[name=ratio]').forEach(el=>{
 });
 
 function updateBackgroundOptions(){
- $('backgroundOptions').style.display=selected('fit')==='extend'?'block':'none';
+ const isExtend=selected('fit')==='extend';
+ $('backgroundOptions').style.display=isExtend?'block':'none';
+ $('aiPromptWrap').style.display=isExtend&&selected('bgStyle')==='ai'?'block':'none';
 }
-document.querySelectorAll('input[name=fit]').forEach(el=>{
+document.querySelectorAll('input[name=fit],input[name=bgStyle]').forEach(el=>{
  el.addEventListener('change',updateBackgroundOptions);
 });
 updateBackgroundOptions();
@@ -383,6 +397,24 @@ async function encodeWithinRange(canvas,type,min,max,qualityMode){
  return best;
 }
 
+async function requestAIOutpaint(width,height){
+ const form=new FormData();
+ form.append('image',sourceFile,sourceFile.name||'source-image');
+ form.append('width',String(width));
+ form.append('height',String(height));
+ form.append('prompt',($('aiPrompt').value||'').trim());
+ const response=await fetch(`${API_BASE_URL}/api/outpaint`,{method:'POST',body:form});
+ let payload={};
+ try{payload=await response.json();}catch(_e){}
+ if(!response.ok){
+  throw new Error(payload.error||`AI outpainting failed (HTTP ${response.status}). Check config.js, the backend URL, API key and server logs.`);
+ }
+ if(!payload.imageBase64||!payload.mimeType){
+  throw new Error('The AI service returned an invalid image response.');
+ }
+ return payload;
+}
+
 $('process').addEventListener('click',async()=>{
 
  if(!sourceImage)return;
@@ -421,7 +453,22 @@ $('process').addEventListener('click',async()=>{
   const sw=sourceImage.naturalWidth;
   const sh=sourceImage.naturalHeight;
 
-  if(fit==='crop'){
+  if(fit==='extend' && selected('bgStyle')==='ai'){
+   status('AI is extending the background. This can take up to a couple of minutes…');
+   $('process').textContent='Generating background…';
+   const aiResult=await requestAIOutpaint(w,h);
+   const generatedImage=new Image();
+   generatedImage.src=`data:${aiResult.mimeType};base64,${aiResult.imageBase64}`;
+   await new Promise((resolve,reject)=>{generatedImage.onload=resolve;generatedImage.onerror=()=>reject(new Error('Could not load the AI-generated background.'));});
+   // Fit the generated canvas to the exact requested output dimensions.
+   ctx.drawImage(generatedImage,0,0,w,h);
+   // Re-composite the original source above the AI result. This protects
+   // all original typography, logos, faces, colours and foreground details.
+   const foregroundScale=Math.min(w/sw,h/sh);
+   const foregroundWidth=sw*foregroundScale;
+   const foregroundHeight=sh*foregroundScale;
+   ctx.drawImage(sourceImage,(w-foregroundWidth)/2,(h-foregroundHeight)/2,foregroundWidth,foregroundHeight);
+  }else if(fit==='crop'){
    // Smart Crop: fill the target canvas, intentionally cropping overflow.
    const scale=Math.max(w/sw,h/sh);
    const dw=sw*scale;
@@ -620,7 +667,8 @@ $('reset').addEventListener('click',()=>{
  document.querySelector('input[name=ratio][value=custom]').checked=true;
  document.querySelector('input[name=format][value="image/webp"]').checked=true;
  document.querySelector('input[name=fit][value=extend]').checked=true;
- document.querySelector('input[name=bgStyle][value=blur]').checked=true;
+ document.querySelector('input[name=bgStyle][value=ai]').checked=true;
+ $('aiPrompt').value='';
  updateBackgroundOptions();
  document.querySelector('input[name=quality][value=high]').checked=true;
 
