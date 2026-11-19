@@ -1,21 +1,15 @@
-# Image Resizer & Optimizer
+Image Resizer & Optimizer
 
-A standalone, responsive image-processing app. It runs locally in the browser; images are not uploaded to a server.
+Deploy:
+1. Upload index.html to the root of your GitHub repository.
+2. Commit the change to the main branch.
+3. If GitHub Pages is enabled for main / (root), wait for the deployment to finish.
+4. Refresh the published site. If the old version remains, do a hard refresh (Ctrl+F5).
 
-## Use
-1. Open `index.html` in a modern browser.
-2. Choose or drag in a PNG, JPG, or WebP image.
-3. Set dimensions, aspect ratio, output format, target KB range, fitting method, and quality.
-4. Click **Process image**, then download the result.
+Image fitting methods:
+- Smart crop: fills the target canvas and may crop outer edges.
+- Contain: preserves the complete image with neutral padding where needed.
+- Extend background: default. Places the complete original image over a blurred, enlarged backdrop.
 
-## Share with others
-- Quick sharing: send them `index.html`; they can open it in a modern browser.
-- Shareable URL: upload `index.html` as `index.html` to a static host such as GitHub Pages, Netlify, or Cloudflare Pages, then share the published URL.
-- No backend or account is required for image processing.
-
-## Notes
-- Smart crop fills the requested canvas using a centered crop and can trim edges.
-- Contain/extend preserve the full image and use white padding when aspect ratios differ.
-- WebP/JPG quality is adjusted to try to fit the requested maximum file size.
-- PNG is lossless, so its size cannot be guaranteed to fit a target KB range.
-- Resizing preserves existing pixels as closely as possible; it cannot recover detail missing from a low-resolution source.
+All processing is performed locally in the browser. No image is uploaded to a server.
+Note: Extend background uses a blurred enlargement of the original image, not AI-generated outpainting.
