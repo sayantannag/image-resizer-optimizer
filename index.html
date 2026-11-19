@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="en">
 <head>
@@ -162,13 +161,13 @@ footer{padding:14px 18px}
  <h2 class="section-title">4. Image fitting method</h2>
 
  <div class="radios" style="display:grid;gap:11px">
-  <label class="radio"><input type="radio" name="fit" value="crop" checked> Smart crop – fill entire canvas (center crop)</label>
+  <label class="radio"><input type="radio" name="fit" value="crop"> Smart crop – fill entire canvas (center crop)</label>
   <label class="radio"><input type="radio" name="fit" value="contain"> Contain – preserve entire image (may leave padding)</label>
-  <label class="radio"><input type="radio" name="fit" value="extend"> Extend canvas – preserve all content</label>
+  <label class="radio"><input type="radio" name="fit" value="extend" checked> Extend background – no crop (recommended)</label>
  </div>
 
  <p style="font-size:12px;color:#64748b;margin:10px 0 0">
-  Contain and extend preserve the full image; padding is added where needed. Smart crop fills the target but may trim outer edges.
+  Smart crop intentionally trims edges. Contain shows the full image with padding. Extend background shows the complete original image over a softly blurred, enlarged version of its background—without cropping, stretching or squeezing the original content.
  </p>
 </section>
 
@@ -400,40 +399,61 @@ $('process').addEventListener('click',async()=>{
 
   const ctx=c.getContext('2d',{alpha:type!=='image/jpeg'});
 
-  if(type==='image/jpeg'||fit==='contain'||fit==='extend'){
-   ctx.fillStyle='#ffffff';
-   ctx.fillRect(0,0,w,h);
-  }
-
   const sw=sourceImage.naturalWidth;
   const sh=sourceImage.naturalHeight;
 
   if(fit==='crop'){
-
+   // Smart Crop: fill the target canvas, intentionally cropping overflow.
    const scale=Math.max(w/sw,h/sh);
    const dw=sw*scale;
    const dh=sh*scale;
+   ctx.drawImage(sourceImage,(w-dw)/2,(h-dh)/2,dw,dh);
 
-   ctx.drawImage(
-    sourceImage,
-    (w-dw)/2,
-    (h-dh)/2,
-    dw,
-    dh
-   );
-
-  }else{
-
+  }else if(fit==='contain'){
+   // Contain: preserve every source pixel and use a neutral background.
+   if(type==='image/jpeg'){
+    ctx.fillStyle='#ffffff';
+    ctx.fillRect(0,0,w,h);
+   }
    const scale=Math.min(w/sw,h/sh);
    const dw=sw*scale;
    const dh=sh*scale;
+   ctx.drawImage(sourceImage,(w-dw)/2,(h-dh)/2,dw,dh);
 
+  }else if(fit==='extend'){
+   // Extend Background: create a soft, enlarged backdrop, then place the
+   // complete original image on top at its contain scale. The foreground
+   // source is never cropped, stretched or squeezed.
+   const backgroundScale=Math.max(w/sw,h/sh);
+   const backgroundWidth=sw*backgroundScale;
+   const backgroundHeight=sh*backgroundScale;
+
+   ctx.save();
+   ctx.filter='blur('+Math.max(12,Math.round(Math.min(w,h)*0.035))+'px)';
    ctx.drawImage(
     sourceImage,
-    (w-dw)/2,
-    (h-dh)/2,
-    dw,
-    dh
+    (w-backgroundWidth)/2,
+    (h-backgroundHeight)/2,
+    backgroundWidth,
+    backgroundHeight
+   );
+   ctx.restore();
+
+   // Slightly soften the backdrop and keep the original image fully visible.
+   ctx.save();
+   ctx.fillStyle='rgba(255,255,255,0.10)';
+   ctx.fillRect(0,0,w,h);
+   ctx.restore();
+
+   const foregroundScale=Math.min(w/sw,h/sh);
+   const foregroundWidth=sw*foregroundScale;
+   const foregroundHeight=sh*foregroundScale;
+   ctx.drawImage(
+    sourceImage,
+    (w-foregroundWidth)/2,
+    (h-foregroundHeight)/2,
+    foregroundWidth,
+    foregroundHeight
    );
   }
 
@@ -529,7 +549,7 @@ $('reset').addEventListener('click',()=>{
 
  document.querySelector('input[name=ratio][value=custom]').checked=true;
  document.querySelector('input[name=format][value="image/webp"]').checked=true;
- document.querySelector('input[name=fit][value=crop]').checked=true;
+ document.querySelector('input[name=fit][value=extend]').checked=true;
  document.querySelector('input[name=quality][value=high]').checked=true;
 
  clearStatus();
